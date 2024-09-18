@@ -1,0 +1,69 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#define SIZE 5
+
+void generateKeyTable(char key[], char keyTable[SIZE][SIZE]) {
+    int dict[26] = {0}, i = 0, j = 0, k;
+    for (k = 0; k < strlen(key); k++)
+        if (key[k] != 'j') dict[key[k] - 'a'] = 2;
+    dict['j' - 'a'] = 1;
+    
+    for (k = 0; k < strlen(key); k++)
+        if (dict[key[k] - 'a']-- > 0) {
+            keyTable[i][j++] = key[k];
+            if (j == SIZE) { i++; j = 0; }
+        }
+    
+    for (k = 0; k < 26; k++)
+        if (dict[k] == 0) {
+            keyTable[i][j++] = k + 'a';
+            if (j == SIZE) { i++; j = 0; }
+        }
+}
+
+void search(char keyTable[SIZE][SIZE], char a, char b, int arr[]) {
+    if (a == 'j') a = 'i'; else if (b == 'j') b = 'i';
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            if (keyTable[i][j] == a) { arr[0] = i; arr[1] = j; }
+            else if (keyTable[i][j] == b) { arr[2] = i; arr[3] = j; }
+}
+
+void process(char str[], char keyTable[SIZE][SIZE], int encrypt) {
+    int a[4];
+    for (int i = 0; i < strlen(str); i += 2) {
+        if (i + 1 == strlen(str)) str[i + 1] = 'x';
+        else if (str[i] == str[i + 1]) memmove(&str[i + 1], &str[i], strlen(str) - i);
+        search(keyTable, str[i], str[i + 1], a);
+        if (a[0] == a[2]) str[i] = keyTable[a[0]][(a[1] + (encrypt ? 1 : -1) + SIZE) % SIZE];
+        else if (a[1] == a[3]) str[i] = keyTable[(a[0] + (encrypt ? 1 : -1) + SIZE) % SIZE][a[1]];
+        else { str[i] = keyTable[a[0]][a[3]]; str[i + 1] = keyTable[a[2]][a[1]]; }
+    }
+}
+
+void prepareString(char str[], char preparedStr[]) {
+    int j = 0;
+    for (int i = 0; i < strlen(str); i++)
+        if (isalpha(str[i])) preparedStr[j++] = tolower(str[i]);
+    preparedStr[j] = '\0';
+}
+
+int main() {
+    char key[SIZE * SIZE], keyTable[SIZE][SIZE], str[100], preparedStr[100];
+    printf("Enter key: "); gets(key);
+    generateKeyTable(key, keyTable);
+    printf("Enter plaintext: "); gets(str);
+    prepareString(str, preparedStr);
+    process(preparedStr, keyTable, 1);
+    printf("Encrypted text: %s\n", preparedStr);
+    process(preparedStr, keyTable, 0);
+    printf("Decrypted text: %s\n", preparedStr);
+    return 0;
+}
+/*
+Enter key: keyword
+Enter plaintext: Welcome to DSU
+Encrypted text: xjfpxnpxis
+Decrypted text: welcometodsu
+*/
