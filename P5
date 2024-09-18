@@ -1,0 +1,137 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
+#define SIZE 3 // Size of the matrix (3x3 for Hill cipher)
+
+void getKeyMatrix(char key[], int keyMatrix[SIZE][SIZE]) {
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++)
+            keyMatrix[i][j] = (key[i * SIZE + j] - 'A') % 26;
+}
+
+void matrixMultiply(int result[SIZE][1], int a[SIZE][SIZE], int b[SIZE][1]) {
+    for (int i = 0; i < SIZE; i++) {
+        result[i][0] = 0;
+        for (int j = 0; j < SIZE; j++)
+            result[i][0] += a[i][j] * b[j][0];
+        result[i][0] %= 26;
+    }
+}
+
+void encrypt(int cipherMatrix[SIZE][1], int keyMatrix[SIZE][SIZE], int messageVector[SIZE][1]) {
+    matrixMultiply(cipherMatrix, keyMatrix, messageVector);
+}
+
+void decrypt(int messageMatrix[SIZE][1], int keyMatrix[SIZE][SIZE], int cipherVector[SIZE][1], int inverseKeyMatrix[SIZE][SIZE]) {
+    matrixMultiply(messageMatrix, inverseKeyMatrix, cipherVector);
+}
+
+int determinant(int A[SIZE][SIZE]) {
+    int det = 0, sign = 1;
+    for (int f = 0; f < SIZE; f++) {
+        int temp[SIZE][SIZE];
+        for (int i = 1; i < SIZE; i++)
+            for (int j = 0; j < SIZE; j++)
+                if (j != f) temp[i-1][j < f ? j : j-1] = A[i][j];
+        det += sign * A[0][f] * determinant(temp);
+        sign = -sign;
+    }
+    return det;
+}
+
+void getCofactor(int A[SIZE][SIZE], int temp[SIZE][SIZE], int p, int q) {
+    int i = 0, j = 0;
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            if (row != p && col != q) temp[i][j++] = A[row][col];
+            if (j == SIZE - 1) { j = 0; i++; }
+        }
+    }
+}
+
+void adjoint(int A[SIZE][SIZE], int adj[SIZE][SIZE]) {
+    int sign = 1, temp[SIZE][SIZE];
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++) {
+            getCofactor(A, temp, i, j);
+            adj[j][i] = sign * determinant(temp);
+            sign = -sign;
+        }
+}
+
+int modInverse(int a, int m) {
+    a = a % m;
+    for (int x = 1; x < m; x++)
+        if ((a * x) % m == 1) return x;
+    return -1;
+}
+
+bool inverse(int A[SIZE][SIZE], int inverse[SIZE][SIZE]) {
+    int det = determinant(A);
+    if (det == 0) return false;
+    int adj[SIZE][SIZE];
+    adjoint(A, adj);
+    int invDet = modInverse(det, 26);
+    for (int i = 0; i < SIZE; i++)
+        for (int j = 0; j < SIZE; j++) {
+            inverse[i][j] = (adj[i][j] * invDet) % 26;
+            if (inverse[i][j] < 0) inverse[i][j] += 26;
+        }
+    return true;
+}
+
+void printMatrix(int matrix[SIZE][1]) {
+    for (int i = 0; i < SIZE; i++)
+        printf("%c", matrix[i][0] + 'A');
+    printf("\n");
+}
+
+int main() {
+    char key[SIZE * SIZE + 1]; // 9-letter key
+    char message[SIZE + 1];    // 3-letter message
+
+    // Input for the message
+    printf("Enter a 3-letter message: ");
+    fgets(message, sizeof(message), stdin);
+    message[strcspn(message, "\n")] = 0; // Remove newline character
+
+    // Input for the key
+    printf("Enter a 9-letter key: ");
+    fgets(key, sizeof(key), stdin);
+    key[strcspn(key, "\n")] = 0; // Remove newline character
+
+    if (strlen(message) != SIZE || strlen(key) != SIZE * SIZE) {
+        printf("Error: Message must be 3 letters and key must be 9 letters.\n");
+        return 1;
+    }
+
+    int keyMatrix[SIZE][SIZE], messageVector[SIZE][1];
+    getKeyMatrix(key, keyMatrix);
+    for (int i = 0; i < SIZE; i++)
+        messageVector[i][0] = (message[i] - 'A') % 26;
+
+    int cipherMatrix[SIZE][1];
+    encrypt(cipherMatrix, keyMatrix, messageVector);
+    printf("Encrypted text: ");
+    printMatrix(cipherMatrix);
+
+    int inverseKeyMatrix[SIZE][SIZE];
+    if (inverse(keyMatrix, inverseKeyMatrix)) {
+        int decryptedMatrix[SIZE][1];
+        decrypt(decryptedMatrix, keyMatrix, cipherMatrix, inverseKeyMatrix);
+        printf("Decrypted text: ");
+        printMatrix(decryptedMatrix);
+    } else {
+        printf("Error: Could not find the inverse of the key matrix.\n");
+    }
+
+    return 0;
+}
+/*
+Enter a 3-letter message: DSU
+Enter a 9-letter key: GYBNQKURP
+Encrypted text: RZP
+Decrypted text: DSU
+*/
