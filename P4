@@ -2,47 +2,41 @@
 #include <string.h>
 #include <ctype.h>
 
-void process(char text[], char key[], char result[], int encrypt) {
-    int key_len = strlen(key), j = 0;
-    for (int i = 0; text[i]; i++) {
-        char c = text[i];
+void encrypt_decrypt(char input[], char key[], char output[], int mode) {
+    int i, j, text_len = strlen(input), key_len = strlen(key);
+    for (i = 0, j = 0; i < text_len; i++) {
+        char c = input[i];
         if (isalpha(c)) {
             c = toupper(c);
-            result[i] = (c - 'A' + (encrypt ? (toupper(key[j++ % key_len]) - 'A') : -(toupper(key[j++ % key_len]) - 'A') + 26)) % 26 + 'A');
+            output[i] = ((c - 'A') + mode * (toupper(key[j % key_len]) - 'A') + 26) % 26 + 'A';
+            j++;
         } else {
-            result[i] = c;
+            output[i] = c;
         }
     }
-    result[strlen(text)] = '\0'; // Null-terminate the result
+    output[i] = '\0';
 }
 
 int main() {
-    char plaintext[100], ciphertext[100], decryptedtext[100];
-    char key[100];
-
-    // Input plaintext
+    char plaintext[100], ciphertext[100], decryptedtext[100], key[100];
+    
     printf("Enter plaintext: ");
-    fgets(plaintext, sizeof(plaintext), stdin);
-    plaintext[strcspn(plaintext, "\n")] = '\0'; // Remove newline character
-
-    // Input key
+    gets(plaintext);
+    
     printf("Enter key: ");
-    fgets(key, sizeof(key), stdin);
-    key[strcspn(key, "\n")] = '\0'; // Remove newline character
-
-    // Encrypt the plaintext
-    process(plaintext, key, ciphertext, 1);
+    gets(key);
+    
+    encrypt_decrypt(plaintext, key, ciphertext, 1);
     printf("Encrypted text: %s\n", ciphertext);
-
-    // Decrypt the ciphertext
-    process(ciphertext, key, decryptedtext, 0);
+    
+    encrypt_decrypt(ciphertext, key, decryptedtext, -1);
     printf("Decrypted text: %s\n", decryptedtext);
-
+    
     return 0;
 }
 /*
 Enter plaintext: Welcome to DSU
-Enter key: keyword
-Encrypted text: XNVRBQRWUFJ
+Enter key: wind
+Encrypted text: SMYFKUR WK LFX
 Decrypted text: WELCOME TO DSU
 */
