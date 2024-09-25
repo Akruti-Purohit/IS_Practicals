@@ -1,69 +1,162 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+
 #define SIZE 5
 
 void generateKeyTable(char key[], char keyTable[SIZE][SIZE]) {
-    int dict[26] = {0}, i = 0, j = 0, k;
-    for (k = 0; k < strlen(key); k++)
-        if (key[k] != 'j') dict[key[k] - 'a'] = 2;
+    int i, j, k, flag = 0;
+    int dict[26] = {0};
+
+    for (i = 0; i < strlen(key); i++) {
+        if (key[i] != 'j') {
+            dict[key[i] - 'a'] = 2;
+        }
+    }
     dict['j' - 'a'] = 1;
-    
-    for (k = 0; k < strlen(key); k++)
-        if (dict[key[k] - 'a']-- > 0) {
-            keyTable[i][j++] = key[k];
-            if (j == SIZE) { i++; j = 0; }
+
+    i = 0;
+    j = 0;
+    for (k = 0; k < strlen(key); k++) {
+        if (dict[key[k] - 'a'] == 2) {
+            keyTable[i][j] = key[k];
+            dict[key[k] - 'a'] -= 1;
+            j++;
+            if (j == SIZE) {
+                i++;
+                j = 0;
+            }
         }
-    
-    for (k = 0; k < 26; k++)
+    }
+
+    for (k = 0; k < 26; k++) {
         if (dict[k] == 0) {
-            keyTable[i][j++] = k + 'a';
-            if (j == SIZE) { i++; j = 0; }
+            keyTable[i][j] = (char)(k + 'a');
+            j++;
+            if (j == SIZE) {
+                i++;
+                j = 0;
+            }
         }
+    }
 }
 
 void search(char keyTable[SIZE][SIZE], char a, char b, int arr[]) {
-    if (a == 'j') a = 'i'; else if (b == 'j') b = 'i';
-    for (int i = 0; i < SIZE; i++)
-        for (int j = 0; j < SIZE; j++)
-            if (keyTable[i][j] == a) { arr[0] = i; arr[1] = j; }
-            else if (keyTable[i][j] == b) { arr[2] = i; arr[3] = j; }
+    int i, j;
+
+    if (a == 'j') {
+        a = 'i';
+    } else if (b == 'j') {
+        b = 'i';
+    }
+
+    for (i = 0; i < SIZE; i++) {
+        for (j = 0; j < SIZE; j++) {
+            if (keyTable[i][j] == a) {
+                arr[0] = i;
+                arr[1] = j;
+            } else if (keyTable[i][j] == b) {
+                arr[2] = i;
+                arr[3] = j;
+            }
+        }
+    }
 }
 
-void process(char str[], char keyTable[SIZE][SIZE], int encrypt) {
-    int a[4];
-    for (int i = 0; i < strlen(str); i += 2) {
-        if (i + 1 == strlen(str)) str[i + 1] = 'x';
-        else if (str[i] == str[i + 1]) memmove(&str[i + 1], &str[i], strlen(str) - i);
+void encrypt(char str[], char keyTable[SIZE][SIZE]) {
+    int i, a[4];
+
+    for (i = 0; i < strlen(str); i += 2) {
+        if (str[i] == str[i + 1]) {
+            memmove(&str[i + 1], &str[i], strlen(str) - i);
+            str[i + 1] = 'x';
+            str[strlen(str)] = '\0';
+        }
+    }
+
+    if (strlen(str) % 2 != 0) {
+        str[strlen(str)] = 'x';
+        str[strlen(str) + 1] = '\0';
+    }
+
+    for (i = 0; i < strlen(str); i += 2) {
         search(keyTable, str[i], str[i + 1], a);
-        if (a[0] == a[2]) str[i] = keyTable[a[0]][(a[1] + (encrypt ? 1 : -1) + SIZE) % SIZE];
-        else if (a[1] == a[3]) str[i] = keyTable[(a[0] + (encrypt ? 1 : -1) + SIZE) % SIZE][a[1]];
-        else { str[i] = keyTable[a[0]][a[3]]; str[i + 1] = keyTable[a[2]][a[1]]; }
+
+        if (a[0] == a[2]) {
+            str[i] = keyTable[a[0]][(a[1] + 1) % SIZE];
+            str[i + 1] = keyTable[a[2]][(a[3] + 1) % SIZE];
+        } else if (a[1] == a[3]) {
+            str[i] = keyTable[(a[0] + 1) % SIZE][a[1]];
+            str[i + 1] = keyTable[(a[2] + 1) % SIZE][a[3]];
+        } else {
+            str[i] = keyTable[a[0]][a[3]];
+            str[i + 1] = keyTable[a[2]][a[1]];
+        }
+    }
+}
+
+void decrypt(char str[], char keyTable[SIZE][SIZE]) {
+    int i, a[4];
+
+    for (i = 0; i < strlen(str); i += 2) {
+        search(keyTable, str[i], str[i + 1], a);
+
+        if (a[0] == a[2]) {
+            str[i] = keyTable[a[0]][(a[1] - 1 + SIZE) % SIZE];
+            str[i + 1] = keyTable[a[2]][(a[3] - 1 + SIZE) % SIZE];
+        } else if (a[1] == a[3]) {
+            str[i] = keyTable[(a[0] - 1 + SIZE) % SIZE][a[1]];
+            str[i + 1] = keyTable[(a[2] - 1 + SIZE) % SIZE][a[3]];
+        } else {
+            str[i] = keyTable[a[0]][a[3]];
+            str[i + 1] = keyTable[a[2]][a[1]];
+        }
     }
 }
 
 void prepareString(char str[], char preparedStr[]) {
-    int j = 0;
-    for (int i = 0; i < strlen(str); i++)
-        if (isalpha(str[i])) preparedStr[j++] = tolower(str[i]);
+    int i, j = 0;
+
+    for (i = 0; i < strlen(str); i++) {
+        if (isalpha(str[i])) {
+            preparedStr[j++] = tolower(str[i]);
+        }
+    }
+
     preparedStr[j] = '\0';
 }
 
 int main() {
-    char key[SIZE * SIZE], keyTable[SIZE][SIZE], str[100], preparedStr[100];
-    printf("Enter key: "); gets(key);
+    char key[SIZE * SIZE], keyTable[SIZE][SIZE];
+    char str[100], preparedStr[100];
+
+    // Input key
+    printf("Enter key: ");
+    gets(key);
+
+    // Generate key table
     generateKeyTable(key, keyTable);
-    printf("Enter plaintext: "); gets(str);
+
+    // Input plaintext
+    printf("Enter plaintext: ");
+    gets(str);
+
+    // Prepare plaintext
     prepareString(str, preparedStr);
-    process(preparedStr, keyTable, 1);
+
+    // Encrypt the plaintext
+    encrypt(preparedStr, keyTable);
     printf("Encrypted text: %s\n", preparedStr);
-    process(preparedStr, keyTable, 0);
+
+    // Decrypt the ciphertext
+    decrypt(preparedStr, keyTable);
     printf("Decrypted text: %s\n", preparedStr);
+
     return 0;
 }
 /*
-Enter key: keyword
+Enter key: Akruti
 Enter plaintext: Welcome to DSU
-Encrypted text: xjfpxnpxis
+Encrypted text: sghdpnlAqbxA
 Decrypted text: welcometodsu
 */
